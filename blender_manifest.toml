@@ -1,0 +1,25 @@
+schema_version = "1.0.0"
+
+id = "ccabn_dataset_generator"
+version = "1.0.0"
+name = "CCABN Dataset Generator"
+tagline = "Generate synthetic facial expression datasets for neural network training"
+maintainer = "CCABN Team"
+type = "add-on"
+
+# Blender version requirements (4.2+ for extension format, but setting to 5.0 as requested)
+blender_version_min = "4.2.0"
+
+# License
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
+
+# Optional: permissions the extension requires
+# permissions = []
+
+# Tags for discoverability
+tags = ["Render", "Animation", "Import-Export", "Machine Learning"]
+
+# Website (optional)
+# website = "https://github.com/yourrepo/ccabn-dataset-generator"
