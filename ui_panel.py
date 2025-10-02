@@ -79,8 +79,6 @@ class CCABN_PT_MainPanel(Panel):
 
         box.label(text="Select a light in the scene and click +", icon='INFO')
 
-        box.prop_search(props, "background_plane", context.scene, "objects", text="Background Plane")
-
         # Human faces list
         box.label(text="Human Faces:")
         row = box.row()
@@ -99,15 +97,30 @@ class CCABN_PT_MainPanel(Panel):
 
         box.label(text="Select a mesh in the scene and click +", icon='INFO')
 
+        box.prop_search(props, "headset_mesh", context.scene, "objects", text="Headset Mesh (Optional)")
+
         # Human face conversion
         if len(props.human_faces) > 0:
             row = box.row()
             row.operator("ccabn.convert_blendshapes", icon='FILE_REFRESH')
 
-        # Background Images Section
+        # Gray Tone Ranges Section
         box = layout.box()
-        box.label(text="Background Images", icon='IMAGE_DATA')
-        box.prop(props, "background_images_path", text="")
+        box.label(text="Random Gray Tones", icon='COLOR')
+
+        col = box.column(align=True)
+        col.label(text="Background Gray Range:")
+        row = col.row(align=True)
+        row.prop(props, "background_gray_min")
+        row.prop(props, "background_gray_max")
+
+        col.separator()
+        col.label(text="Headset Gray Range:")
+        row = col.row(align=True)
+        row.prop(props, "headset_gray_min")
+        row.prop(props, "headset_gray_max")
+
+        box.label(text="0.0 = Black, 1.0 = White", icon='INFO')
 
         # Blendshapes Section
         box = layout.box()
@@ -186,7 +199,7 @@ class CCABN_PT_MainPanel(Panel):
         box.prop(props, "render_engine", text="Engine")
 
         box.label(text="Resolution: 240x240 grayscale", icon='INFO')
-        box.label(text="Camera FOV: 160° (OV2640)", icon='INFO')
+        box.label(text="Set camera FOV to 160° for OV2640 simulation", icon='INFO')
 
         # Generate Button
         layout.separator()

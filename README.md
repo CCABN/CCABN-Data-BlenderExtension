@@ -45,9 +45,9 @@ A Blender extension for generating synthetic facial expression datasets for neur
 - Optionally rig faces with **Faceit** to generate ARKit blendshapes
 - Ensure each face has Shape Keys (blendshapes) for facial expressions
 
-#### Background Setup
-- Create a plane object for displaying background images
-- Add a material with an Image Texture node (the addon will swap images into this node)
+#### Optional Setup
+- Optionally create a mesh for a VR headset (the addon will assign random gray materials)
+- Background is handled automatically via world shader (no plane needed)
 
 #### Lighting
 - Add one or more light sources to your scene
@@ -55,7 +55,8 @@ A Blender extension for generating synthetic facial expression datasets for neur
 
 #### Camera
 - Add a camera and position it facing the human faces
-- The addon will automatically set it to 160° FOV (OV2640 simulation)
+- **Set the camera FOV to 160°** manually (Properties > Camera > Lens > Field of View)
+  - This simulates an OV2640 webcam sensor
 
 ### 2. Using the Extension
 
@@ -64,7 +65,7 @@ Access the panel in the 3D Viewport sidebar under the **CCABN** tab.
 #### Scene Setup
 1. **Camera**: Select your scene camera from the dropdown
 2. **Lights**: Select light objects in the scene and click the + button to add them to the list
-3. **Background Plane**: Select the plane for background images from the dropdown
+3. **Headset Mesh** (Optional): Select a mesh object to represent a VR headset
 4. **Human Faces**: Select mesh objects in the scene and click the + button to add them to the list
 
 #### Convert Blendshapes (Optional)
@@ -73,9 +74,11 @@ If you used Faceit or have ARKit-named blendshapes:
 2. Click **Convert ARKit to Unified Expressions**
 3. The addon will rename matching blendshapes (e.g., `eyeBlinkLeft` → `EyeClosedLeft`)
 
-#### Configure Background Images
-1. Click the folder icon next to **Background Images Folder**
-2. Select a folder containing image files (PNG, JPG, etc.)
+#### Configure Random Gray Tones
+1. **Background Gray Range**: Set min/max values (0.0 = black, 1.0 = white) for random background colors
+   - Default: 0.2 to 0.8 (avoids pure black/white)
+2. **Headset Gray Range**: Set min/max values for the VR headset mesh (if specified)
+   - Default: 0.1 to 0.4 (darker tones typical of headsets)
 
 #### Configure Blendshapes
 1. Click **Refresh Blendshapes** to scan selected human faces
@@ -122,20 +125,24 @@ Each image has a corresponding `.json` file with:
   "blendshapes": {
     "EyeClosedLeft": 0.34,
     "JawOpen": 0.12,
-    "MouthSmileLeft": 0.67,
-    ...
+    "MouthSmileLeft": 0.67
   },
-  "background_image": "/path/to/background/image.jpg"
+  "background_gray": 0.45,
+  "headset_gray": 0.23
 }
 ```
+
+Note: `headset_gray` is only included if a headset mesh was specified.
 
 ## Workflow Example
 
 1. Create 10 human faces in MPFB2
 2. Rig each with Faceit (generates ARKit blendshapes)
 3. Convert to Unified Expressions using the addon
-4. Set up camera, lights, and background plane
+4. Set up camera, lights, and optional headset mesh
 5. Configure randomization ranges:
+   - Background: 0.2-0.8 gray range
+   - Headset: 0.1-0.4 gray range
    - Camera: ±0.1m position, ±5° rotation
    - Lights: ±0.2m position, 70-130% intensity, 3000-6500K temperature
    - Blendshapes: Select 20 key expressions, 0.0-1.0 range
@@ -155,10 +162,6 @@ Each image has a corresponding `.json` file with:
 - Ensure your human face meshes have Shape Keys (blendshapes)
 - In Object Mode, select the mesh and check Properties > Object Data > Shape Keys
 
-### "No images found in folder"
-- Ensure the background images folder contains valid image files
-- Supported formats: PNG, JPG, JPEG, BMP, TGA, EXR, HDR
-
 ### Rendering is slow
 - Switch from Cycles to Eevee for faster rendering
 - Reduce samples in render settings
@@ -171,7 +174,7 @@ Each image has a corresponding `.json` file with:
 
 ## Known Limitations
 
-- Background images are cropped (not stretched) to fit the plane
+- Uses simple gray materials for background/headset (not photo-realistic textures)
 - Camera rotation can move view away from face (user's responsibility to set appropriate ranges)
 - No validation that randomized camera still frames the face
 - Must add lights and human faces one at a time (no multi-select from scene)

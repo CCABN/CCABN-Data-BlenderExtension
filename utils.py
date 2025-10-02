@@ -122,18 +122,16 @@ def validate_scene_setup(props):
     if len(props.lights) == 0:
         return False, "No lights selected"
 
-    # Check background plane
-    if not props.background_plane:
-        return False, "No background plane selected"
-
     # Check human faces
     if len(props.human_faces) == 0:
         return False, "No human face objects selected"
 
-    # Check background images
-    images = get_image_files(props.background_images_path)
-    if len(images) == 0:
-        return False, f"No images found in '{props.background_images_path}'"
+    # Check gray value ranges are valid
+    if props.background_gray_min > props.background_gray_max:
+        return False, "Background gray min cannot be greater than max"
+
+    if props.headset_gray_min > props.headset_gray_max:
+        return False, "Headset gray min cannot be greater than max"
 
     # Check selected blendshapes exist on all humans
     selected_shapes = [item.name for item in props.blendshape_list if item.selected]
@@ -159,16 +157,27 @@ def validate_scene_setup(props):
     if not props.output_path:
         return False, "No output path specified"
 
+    # Expand Blender's relative path notation (//) and other paths
+    try:
+        # bpy.path.abspath handles Blender's // notation
+        output_path = bpy.path.abspath(props.output_path)
+        output_path = os.path.expanduser(os.path.expandvars(output_path))
+        output_dir = Path(output_path).resolve()
+    except Exception as e:
+        return False, f"Invalid output path '{props.output_path}': {str(e)}"
+
     # Check if output directory exists or can be created
-    output_dir = Path(props.output_path)
     if not output_dir.exists():
         try:
             output_dir.mkdir(parents=True, exist_ok=True)
+        except PermissionError:
+            return False, f"Permission denied: Cannot create directory '{output_dir}'. Try a different location like /tmp/ccabn_output or ~/ccabn_output"
         except Exception as e:
-            return False, f"Cannot create output directory: {str(e)}"
+            return False, f"Cannot create output directory '{output_dir}': {str(e)}"
 
-    if not os.access(props.output_path, os.W_OK):
-        return False, f"Output directory is not writable: {props.output_path}"
+    # Check if writable
+    if not os.access(str(output_dir), os.W_OK):
+        return False, f"Output directory is not writable: {output_dir}. Check permissions with: ls -la {output_dir.parent}"
 
     # Check images per human
     if props.images_per_human <= 0:

@@ -72,10 +72,10 @@ class CCABNProperties(PropertyGroup):
         default=0
     )
 
-    background_plane: PointerProperty(
+    headset_mesh: PointerProperty(
         type=bpy.types.Object,
-        name="Background Plane",
-        description="Plane object to display background images on"
+        name="Headset Mesh",
+        description="Mesh object representing VR headset (will have random gray material)"
     )
 
     human_faces: CollectionProperty(
@@ -89,12 +89,38 @@ class CCABNProperties(PropertyGroup):
         default=0
     )
 
-    # Background images
-    background_images_path: StringProperty(
-        name="Background Images Folder",
-        description="Folder containing background images",
-        subtype='DIR_PATH',
-        default=""
+    # Background gray tone range
+    background_gray_min: FloatProperty(
+        name="Min",
+        default=0.2,
+        min=0.0,
+        max=1.0,
+        description="Minimum gray value for background (0=black, 1=white)"
+    )
+
+    background_gray_max: FloatProperty(
+        name="Max",
+        default=0.8,
+        min=0.0,
+        max=1.0,
+        description="Maximum gray value for background (0=black, 1=white)"
+    )
+
+    # Headset gray tone range
+    headset_gray_min: FloatProperty(
+        name="Min",
+        default=0.1,
+        min=0.0,
+        max=1.0,
+        description="Minimum gray value for headset (0=black, 1=white)"
+    )
+
+    headset_gray_max: FloatProperty(
+        name="Max",
+        default=0.4,
+        min=0.0,
+        max=1.0,
+        description="Maximum gray value for headset (0=black, 1=white)"
     )
 
     # Blendshapes

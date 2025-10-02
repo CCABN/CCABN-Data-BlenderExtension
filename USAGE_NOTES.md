@@ -34,21 +34,23 @@ The lights and human faces can now be properly selected using the UI:
 - Create or import human head meshes with Shape Keys
 - Add a camera
 - Add one or more lights
-- Create a plane for backgrounds
-- Prepare a folder with background images
+- Optionally create a mesh to represent a VR headset
+- Background is handled automatically (no plane needed)
 
 ### 2. Configure the Addon
 1. **Scene Setup Section:**
    - Select camera from dropdown
    - Add lights using + button
-   - Select background plane from dropdown
+   - Select headset mesh (optional) from dropdown
    - Add human face meshes using + button
 
 2. **Convert Blendshapes (Optional):**
    - If using ARKit blendshapes, click "Convert ARKit to Unified Expressions"
 
-3. **Background Images:**
-   - Click folder icon and select folder with images
+3. **Random Gray Tones:**
+   - Set background gray min/max (default: 0.2 to 0.8)
+   - Set headset gray min/max (default: 0.1 to 0.4)
+   - 0.0 = black, 1.0 = white
 
 4. **Blendshapes:**
    - Click "Refresh Blendshapes" to scan human faces
@@ -81,12 +83,14 @@ Each JSON contains:
   "human_object": "Human_001",
   "blendshapes": {
     "EyeClosedLeft": 0.34,
-    "JawOpen": 0.12,
-    ...
+    "JawOpen": 0.12
   },
-  "background_image": "/path/to/background.jpg"
+  "background_gray": 0.45,
+  "headset_gray": 0.23
 }
 ```
+
+Note: `headset_gray` is only included if a headset mesh was specified.
 
 ## Tips
 
@@ -133,10 +137,11 @@ Blendshapes that don't match between the two standards are left unchanged.
 - **Resolution:** 240×240 pixels
 - **Color mode:** Grayscale (BW)
 - **Format:** PNG
-- **Camera FOV:** 160° (OV2640 webcam simulation)
+- **Camera FOV:** Set manually to 160° for OV2640 webcam simulation
 - **Render engines:** Cycles (GPU) or Eevee
-- **Background handling:** Images are cropped (not stretched) to fit plane
-- **Metadata:** JSON sidecar files with blendshape values
+- **Background handling:** Random gray via world shader (0.0-1.0 range, no plane needed)
+- **Headset handling:** Random gray materials on mesh (optional)
+- **Metadata:** JSON sidecar files with blendshape values and gray tone values
 
 ## Development Notes
 

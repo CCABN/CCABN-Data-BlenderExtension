@@ -3,12 +3,12 @@ Core rendering logic for CCABN Dataset Generator
 """
 
 import bpy
+import os
 import random
 import math
 import json
 from pathlib import Path
 from mathutils import Vector, Euler
-from .utils import get_image_files
 
 
 def kelvin_to_rgb(kelvin):
@@ -88,39 +88,116 @@ def setup_render_settings(context, props):
     scene.render.image_settings.color_mode = 'BW'
     scene.render.image_settings.file_format = 'PNG'
 
-    # Set camera FOV to 160 degrees
-    if props.camera and props.camera.type == 'CAMERA':
-        props.camera.data.type = 'PERSP'
-        props.camera.data.lens_unit = 'FOV'
-        props.camera.data.angle = math.radians(160)
+    # Note: Camera FOV is controlled manually by the user
+    # For OV2640 simulation, set camera FOV to 160° in the scene
 
 
-def load_background_image(plane, image_path):
+def set_world_background_gray(scene, min_gray, max_gray):
     """
-    Load and apply background image to plane material
+    Set a random gray color to the world background
 
     Args:
-        plane: Background plane object
-        image_path: Path to image file
+        scene: Blender scene
+        min_gray: Minimum gray value (0.0 to 1.0)
+        max_gray: Maximum gray value (0.0 to 1.0)
+
+    Returns:
+        The gray value that was set
     """
-    # Ensure plane has a material
-    if not plane.data.materials:
-        return
+    # Generate random gray value
+    gray_value = random.uniform(min_gray, max_gray)
 
-    mat = plane.data.materials[0]
+    # Ensure world exists
+    if not scene.world:
+        scene.world = bpy.data.worlds.new("World")
 
-    # Find the image texture node (assumes user has set up material)
-    if not mat.use_nodes:
-        return
+    world = scene.world
 
-    for node in mat.node_tree.nodes:
-        if node.type == 'TEX_IMAGE':
-            # Load and assign image
-            img = bpy.data.images.load(image_path, check_existing=True)
-            node.image = img
-            # Set to clip/crop mode
-            node.extension = 'CLIP'
+    # Enable nodes
+    world.use_nodes = True
+
+    # Find or create Background node
+    bg_node = None
+    for node in world.node_tree.nodes:
+        if node.type == 'BACKGROUND':
+            bg_node = node
             break
+
+    if not bg_node:
+        # Create Background node if it doesn't exist
+        bg_node = world.node_tree.nodes.new('ShaderNodeBackground')
+        output = None
+        for node in world.node_tree.nodes:
+            if node.type == 'OUTPUT_WORLD':
+                output = node
+                break
+        if not output:
+            output = world.node_tree.nodes.new('ShaderNodeOutputWorld')
+        world.node_tree.links.new(bg_node.outputs['Background'], output.inputs['Surface'])
+
+    # Set the background color to the random gray
+    bg_node.inputs['Color'].default_value = (gray_value, gray_value, gray_value, 1.0)
+    bg_node.inputs['Strength'].default_value = 1.0
+
+    return gray_value
+
+
+def set_random_gray_material(obj, min_gray, max_gray):
+    """
+    Set a random gray color to an object's material
+
+    Args:
+        obj: Object with material
+        min_gray: Minimum gray value (0.0 to 1.0)
+        max_gray: Maximum gray value (0.0 to 1.0)
+
+    Returns:
+        The gray value that was set
+    """
+    if not obj or not obj.data.materials:
+        # Create a material if it doesn't exist
+        if obj:
+            mat = bpy.data.materials.new(name=f"{obj.name}_Material")
+            mat.use_nodes = True
+            if len(obj.data.materials) == 0:
+                obj.data.materials.append(mat)
+            else:
+                obj.data.materials[0] = mat
+        else:
+            return None
+
+    mat = obj.data.materials[0]
+
+    # Ensure material uses nodes
+    if not mat.use_nodes:
+        mat.use_nodes = True
+
+    # Generate random gray value
+    gray_value = random.uniform(min_gray, max_gray)
+
+    # Find or create Principled BSDF node
+    principled = None
+    for node in mat.node_tree.nodes:
+        if node.type == 'BSDF_PRINCIPLED':
+            principled = node
+            break
+
+    if not principled:
+        # Create Principled BSDF if it doesn't exist
+        principled = mat.node_tree.nodes.new('ShaderNodeBsdfPrincipled')
+        output = None
+        for node in mat.node_tree.nodes:
+            if node.type == 'OUTPUT_MATERIAL':
+                output = node
+                break
+        if not output:
+            output = mat.node_tree.nodes.new('ShaderNodeOutputMaterial')
+        mat.node_tree.links.new(principled.outputs['BSDF'], output.inputs['Surface'])
+
+    # Set the base color to the random gray
+    principled.inputs['Base Color'].default_value = (gray_value, gray_value, gray_value, 1.0)
+
+    return gray_value
 
 
 def randomize_blendshapes(obj, blendshape_configs):
@@ -236,10 +313,10 @@ def render_dataset(context, props):
     # Setup render settings
     setup_render_settings(context, props)
 
-    # Get background images
-    background_images = get_image_files(props.background_images_path)
-    if not background_images:
-        return False, "No background images found"
+    # Expand output path (handles Blender's // notation and ~ expansion)
+    output_path = bpy.path.abspath(props.output_path)
+    output_path = os.path.expanduser(os.path.expandvars(output_path))
+    output_dir = Path(output_path).resolve()
 
     # Get selected blendshapes with ranges
     blendshape_configs = [
@@ -293,9 +370,21 @@ def render_dataset(context, props):
                 # Randomize blendshapes
                 blendshape_values = randomize_blendshapes(human, blendshape_configs)
 
-                # Pick random background image
-                bg_image_path = random.choice(background_images)
-                load_background_image(props.background_plane, bg_image_path)
+                # Set random gray background (world)
+                bg_gray = set_world_background_gray(
+                    scene,
+                    props.background_gray_min,
+                    props.background_gray_max
+                )
+
+                # Set random gray headset (if specified)
+                headset_gray = None
+                if props.headset_mesh:
+                    headset_gray = set_random_gray_material(
+                        props.headset_mesh,
+                        props.headset_gray_min,
+                        props.headset_gray_max
+                    )
 
                 # Randomize camera
                 randomize_camera(props.camera, props, camera_base_loc, camera_base_rot)
@@ -314,8 +403,8 @@ def render_dataset(context, props):
 
                 # Render
                 output_filename = f"{file_counter}.png"
-                output_path = Path(props.output_path) / output_filename
-                scene.render.filepath = str(output_path)
+                render_path = output_dir / output_filename
+                scene.render.filepath = str(render_path)
 
                 bpy.ops.render.render(write_still=True)
 
@@ -324,10 +413,14 @@ def render_dataset(context, props):
                     "image": output_filename,
                     "human_object": human.name,
                     "blendshapes": blendshape_values,
-                    "background_image": bg_image_path,
+                    "background_gray": bg_gray,
                 }
 
-                metadata_path = Path(props.output_path) / f"{file_counter}.json"
+                # Add headset gray if it was used
+                if headset_gray is not None:
+                    metadata["headset_gray"] = headset_gray
+
+                metadata_path = output_dir / f"{file_counter}.json"
                 with open(metadata_path, 'w') as f:
                     json.dump(metadata, f, indent=2)
 
